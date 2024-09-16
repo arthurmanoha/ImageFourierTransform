@@ -32,6 +32,9 @@ public class ImageWindow extends JFrame {
     ImagePanel transformedPanelLeft;
     ImagePanel transformedPanelMiddle;
     ImagePanel transformedPanelRight;
+    JLabel labelFirst;
+    JLabel labelMiddle;
+    JLabel labelSecond;
 
     int width = 1900, height = 1050;
     int availableWidth, availableHeight; // for each image
@@ -72,15 +75,15 @@ public class ImageWindow extends JFrame {
         this.setSize(new Dimension(10, 10));
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        JLabel labelFirst = new JLabel("First Image");
+        labelFirst = new JLabel("First Image");
         prepareComponent(labelFirst, 0, 0, layout);
         mainPanel.add(labelFirst);
 
-        JLabel middlePanel = new JLabel("Middle Image");
-        prepareComponent(middlePanel, 1, 0, layout);
-        mainPanel.add(middlePanel, constraints);
+        labelMiddle = new JLabel("Middle Image");
+        prepareComponent(labelMiddle, 1, 0, layout);
+        mainPanel.add(labelMiddle, constraints);
 
-        JLabel labelSecond = new JLabel("Second Image");
+        labelSecond = new JLabel("Second Image");
         prepareComponent(labelSecond, 2, 0, layout);
         mainPanel.add(labelSecond);
 
@@ -314,7 +317,11 @@ public class ImageWindow extends JFrame {
         System.out.println("mix " + percentage);
         MyImage imgA = transformedPanelLeft.getImage().multiply(1 - percentage / 100);
         MyImage imgB = transformedPanelRight.getImage().multiply(percentage / 100);
+        MyImage imgMiddle = new MyImage(imgA, imgB);
 
-        transformedPanelMiddle.setImage(new MyImage(imgA, imgB));
+        transformedPanelMiddle.setImage(imgMiddle);
+        labelFirst.setText("First Image");
+        labelMiddle.setText("Middle Image");
+        labelSecond.setText("Second Image");
     }
 }
