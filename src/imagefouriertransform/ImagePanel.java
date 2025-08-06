@@ -11,25 +11,25 @@ import javax.swing.JPanel;
  */
 public class ImagePanel extends JPanel {
 
-    private MyImage image;
-    private int margin = 10;
-
-    private int minOutOfBoundsValue = Integer.MAX_VALUE;
-    private int maxOutOfBoundsValue = Integer.MIN_VALUE;
+    protected MyImage image;
 
     // Apparent size of a single pixel
-    private int zoom;
+    protected int zoom;
 
-    // When this panel represents a Furier image, the values must be remapped
+    // When this panel represents a Fourier image, the values must be remapped
     boolean mustChangeScale;
 
     private boolean displayValues;
+
+    protected boolean isMouseButtonPressed;
 
     public ImagePanel(MyImage imageParam) {
         image = imageParam;
         zoom = 10;
         displayValues = false;
         mustChangeScale = false;
+        isMouseButtonPressed = false;
+
     }
 
     public ImagePanel(MyImage imageParam, boolean mustChangeScaleParam) {
@@ -65,8 +65,12 @@ public class ImagePanel extends JPanel {
                     imageValue = (int) (Math.sqrt((double) imageValue / 255) * 255);
                     imageValue = (int) (Math.sqrt((double) imageValue / 255) * 255);
                 }
-
-                g.setColor(new Color(imageValue, imageValue, imageValue));
+                try {
+                    g.setColor(new Color(imageValue, imageValue, imageValue));
+                } catch (IllegalArgumentException e) {
+                    imageValue += 255;
+                    g.setColor(new Color(imageValue, imageValue, imageValue));
+                }
                 g.fillRect(col * zoom, row * zoom, zoom, zoom);
 
                 if (displayValues) {
