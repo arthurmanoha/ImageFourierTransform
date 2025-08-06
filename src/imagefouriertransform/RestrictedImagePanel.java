@@ -149,4 +149,38 @@ public class RestrictedImagePanel extends ImagePanel {
         value = boundToColorValue(imageValue);
         return new Color(value, value, value);
     }
+
+    /**
+     * If this string contains a decimal dot, keep at most 2 characters after
+     * it.
+     *
+     * @param s
+     * @param nbDecimals
+     * @return
+     */
+    private String trim(String s, int nbDecimals) {
+        if (s.contains(".")) {
+            int rankOfDot = s.indexOf(".");
+            s += "  "; // make sure we have enough characters
+            return s.substring(0, rankOfDot + 2);
+        } else {
+            return s;
+        }
+    }
+
+    public String getPercentageActive() {
+        int totalNbPixels = image.getHeight() * image.getWidth();
+
+        int activeNbPixels = 0;
+        for (int row = 0; row < image.getHeight(); row++) {
+            for (int col = 0; col < image.getWidth(); col++) {
+                if (flags[row][col] == ON) {
+                    activeNbPixels++;
+                }
+            }
+        }
+
+        double fraction = (double) activeNbPixels / (double) totalNbPixels * 100;
+        return trim(fraction + "", 2) + " % active";
+    }
 }

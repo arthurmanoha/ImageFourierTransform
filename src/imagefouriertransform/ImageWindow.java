@@ -254,6 +254,7 @@ public class ImageWindow extends JFrame {
                 imageDest.set(y, x, fxy);
             }
         }
+        labelTransformed.setText("Transformed Image: " + transformedImagePanel.getPercentageActive());
     }
 
     public void computeReverseTransform() {
