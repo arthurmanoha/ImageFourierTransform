@@ -242,9 +242,11 @@ public class ImageWindow extends JFrame {
                 Complex fxy = new Complex();
                 for (int u = 0; u < N; u++) {
                     for (int v = 0; v < M; v++) {
-                        double argument = 2 * PI * ((double) (u * x) / N + (double) (v * y) / M);
-                        Complex exponentPart = new Complex(argument);
-                        fxy.increment(exponentPart.multiply(imageSource.get(v, u)));
+                        if (transformedImagePanel.isActive(v, u)) {
+                            double argument = 2 * PI * ((double) (u * x) / N + (double) (v * y) / M);
+                            Complex exponentPart = new Complex(argument);
+                            fxy.increment(exponentPart.multiply(imageSource.get(v, u)));
+                        }
                     }
                 }
 

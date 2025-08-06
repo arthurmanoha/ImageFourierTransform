@@ -135,4 +135,18 @@ public class RestrictedImagePanel extends ImagePanel {
             g.drawLine(xDraw1, yDraw0, xDraw1, yDraw1);
         }
     }
+
+    protected boolean isActive(int row, int col) {
+        return flags[row][col] == ON;
+    }
+
+    @Override
+    protected Color chooseColor(int value) {
+
+        // Increase the display value of near-zero pixels by taking a square root twice.
+        int imageValue = (int) (Math.sqrt((double) value / 255) * 255);
+        imageValue = (int) (Math.sqrt((double) imageValue / 255) * 255);
+        value = boundToColorValue(imageValue);
+        return new Color(value, value, value);
+    }
 }
