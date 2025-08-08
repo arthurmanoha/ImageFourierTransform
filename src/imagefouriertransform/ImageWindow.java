@@ -215,7 +215,7 @@ public class ImageWindow extends JFrame {
                     }
                 }
                 Fuv = Fuv.divide(M * N);
-                imageDest.set(v, u, Fuv);
+                imageDest.set((int) ((v + M / 2) % M), (int) ((u + N / 2) % N), Fuv);
             }
         }
         System.out.println("Computing transform done");
@@ -242,10 +242,10 @@ public class ImageWindow extends JFrame {
                 Complex fxy = new Complex();
                 for (int u = 0; u < N; u++) {
                     for (int v = 0; v < M; v++) {
-                        if (transformedImagePanel.isActive(v, u)) {
+                        if (transformedImagePanel.isActive((int) ((v + M / 2) % M), (int) ((u + N / 2) % N))) {
                             double argument = 2 * PI * ((double) (u * x) / N + (double) (v * y) / M);
                             Complex exponentPart = new Complex(argument);
-                            fxy.increment(exponentPart.multiply(imageSource.get(v, u)));
+                            fxy.increment(exponentPart.multiply(imageSource.get((int) ((v + M / 2) % M), (int) ((u + N / 2) % N))));
                         }
                     }
                 }
