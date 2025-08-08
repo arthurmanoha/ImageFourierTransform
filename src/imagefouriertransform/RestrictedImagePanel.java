@@ -137,7 +137,11 @@ public class RestrictedImagePanel extends ImagePanel {
     }
 
     protected boolean isActive(int row, int col) {
-        return flags[row][col] == ON;
+        try {
+            return flags[row][col] == ON;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
+        }
     }
 
     @Override

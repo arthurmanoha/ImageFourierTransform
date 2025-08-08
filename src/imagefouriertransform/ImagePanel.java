@@ -27,7 +27,7 @@ public class ImagePanel extends JPanel {
 
     public ImagePanel(MyImage imageParam) {
         image = imageParam;
-        zoom = 10;
+        zoom = 7;
         displayValues = false;
         mustChangeScale = false;
         isMouseButtonPressed = false;

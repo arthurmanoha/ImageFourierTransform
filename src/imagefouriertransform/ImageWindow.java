@@ -27,11 +27,13 @@ public class ImageWindow extends JFrame {
     JLabel labelTransformed;
     JLabel labelReconstructed;
 
-    int width = 1900, height = 600;
+    int width = 1920, height = 1050;
     int availableWidth, availableHeight; // for each image
 
+    int chunkSize = 32;
     double percentage; // [0; 100]
 
+//    boolean centerTransform = false;
     // The different ways we can interact with the pixels of the transformed image
     enum selectionMode {
         ON, OFF, TOGGLE
@@ -78,7 +80,7 @@ public class ImageWindow extends JFrame {
         mainPanel.add(labelTransformed, constraints);
 
         labelReconstructed = new JLabel("Reconstructed Image");
-        prepareComponent(labelReconstructed, 2, 0, layout);
+        prepareComponent(labelReconstructed, 0, 2, layout);
         mainPanel.add(labelReconstructed);
 
         Dimension myPrefSize = new Dimension(availableWidth, 200);
@@ -98,7 +100,7 @@ public class ImageWindow extends JFrame {
         // Reconstructed image
         reconstructedImagePanel = new ImagePanel(imgA.createEmptyClone());
         reconstructedImagePanel.setPreferredSize(myPrefSize);
-        prepareComponent(reconstructedImagePanel, 2, 1, layout);
+        prepareComponent(reconstructedImagePanel, 0, 3, layout);
         mainPanel.add(reconstructedImagePanel);
 
         createButtonsPanel();
@@ -203,19 +205,30 @@ public class ImageWindow extends JFrame {
         double N = imageSource.getWidth();
 
         for (int v = 0; v < M; v++) {
+            int yStart = (v / chunkSize) * chunkSize;
             for (int u = 0; u < N; u++) {
+                int xStart = (u / chunkSize) * chunkSize;
 
                 // Compute the value of pixel (u,v) of the tranform
                 Complex Fuv = new Complex();
-                for (int y = 0; y < M; y++) {
-                    for (int x = 0; x < N; x++) {
-                        double argument = -2 * PI * ((double) (u * x) / N + (double) (v * y) / M);
+
+                for (int y = yStart; y < yStart + chunkSize; y++) {
+                    for (int x = xStart; x < xStart + chunkSize; x++) {
+                        double argument = -2 * PI * ((double) (u * x) / chunkSize + (double) (v * y) / chunkSize);
                         Complex exponentPart = new Complex(argument);
                         Fuv.increment(exponentPart.multiply(imageSource.get(y, x)));
                     }
                 }
-                Fuv = Fuv.divide(M * N);
-                imageDest.set((int) ((v + M / 2) % M), (int) ((u + N / 2) % N), Fuv);
+//                Fuv = Fuv.divide(M * N);
+                Fuv = Fuv.divide(chunkSize * chunkSize);
+                imageDest.set(v, u, Fuv);
+
+//                if (centerTransform) {
+//                    imageDest.set((int) ((v + chunkSize / 2) % chunkSize),
+//                            (int) ((u + chunkSize / 2) % chunkSize), Fuv);
+//                } else {
+//                imageDest.set(v, u, Fuv);
+//                }
             }
         }
         System.out.println("Computing transform done");
@@ -236,16 +249,32 @@ public class ImageWindow extends JFrame {
         double N = imageSource.getWidth();
 
         for (int x = 0; x < N; x++) {
+            int uStart = (x / chunkSize) * chunkSize;
             for (int y = 0; y < M; y++) {
+                int vStart = (y / chunkSize) * chunkSize;
 
                 // Compute the value of pixel (x,y) of the decoded image
                 Complex fxy = new Complex();
-                for (int u = 0; u < N; u++) {
-                    for (int v = 0; v < M; v++) {
-                        if (transformedImagePanel.isActive((int) ((v + M / 2) % M), (int) ((u + N / 2) % N))) {
-                            double argument = 2 * PI * ((double) (u * x) / N + (double) (v * y) / M);
+                for (int u = uStart; u < uStart + chunkSize; u++) {
+                    for (int v = vStart; v < vStart + chunkSize; v++) {
+
+                        boolean pixelIsActive;
+                        pixelIsActive = transformedImagePanel.isActive(v, u);
+//                        if (centerTransform) {
+//                            pixelIsActive = transformedImagePanel.isActive((int) ((v + M / 2) % M), (int) ((u + N / 2) % N));
+//                        } else {
+//                            pixelIsActive = transformedImagePanel.isActive(v, u);
+//                        }
+
+                        if (pixelIsActive) {
+                            double argument = 2 * PI * ((double) (u * x) / chunkSize + (double) (v * y) / chunkSize);
                             Complex exponentPart = new Complex(argument);
-                            fxy.increment(exponentPart.multiply(imageSource.get((int) ((v + M / 2) % M), (int) ((u + N / 2) % N))));
+                            fxy.increment(exponentPart.multiply(imageSource.get(v, u)));
+//                            if (centerTransform) {
+//                                fxy.increment(exponentPart.multiply(imageSource.get((int) ((v + M / 2) % M), (int) ((u + N / 2) % N))));
+//                            } else {
+//                                fxy.increment(exponentPart.multiply(imageSource.get(v, u)));
+//                            }
                         }
                     }
                 }

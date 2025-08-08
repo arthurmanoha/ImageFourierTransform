@@ -134,7 +134,11 @@ public class MyImage {
     }
 
     Complex get(int row, int col) {
-        return array2D[row][col];
+        try {
+            return array2D[row][col];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return new Complex();
+        }
     }
 
     void set(int row, int col, Complex newVal) {
