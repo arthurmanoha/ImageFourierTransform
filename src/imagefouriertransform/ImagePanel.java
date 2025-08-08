@@ -11,25 +11,27 @@ import javax.swing.JPanel;
  */
 public class ImagePanel extends JPanel {
 
-    private MyImage image;
-    private int margin = 10;
-
-    private int minOutOfBoundsValue = Integer.MAX_VALUE;
-    private int maxOutOfBoundsValue = Integer.MIN_VALUE;
+    protected MyImage image;
 
     // Apparent size of a single pixel
-    private int zoom;
+    protected int zoom;
 
-    // When this panel represents a Furier image, the values must be remapped
+    // When this panel represents a Fourier image, the values must be remapped
     boolean mustChangeScale;
 
     private boolean displayValues;
+
+    protected boolean isMouseButtonPressed;
+
+    private Color errorColor = Color.orange;
 
     public ImagePanel(MyImage imageParam) {
         image = imageParam;
         zoom = 10;
         displayValues = false;
         mustChangeScale = false;
+        isMouseButtonPressed = false;
+
     }
 
     public ImagePanel(MyImage imageParam, boolean mustChangeScaleParam) {
@@ -59,14 +61,7 @@ public class ImagePanel extends JPanel {
                 // /////////////////////////////////////////////////////////////
                 int imageValue = image.getRealPart(row, col);
                 // [0, 255]
-
-                if (mustChangeScale) {
-                    // Increase the display value of near-zero pixels by taking a square root twice.
-                    imageValue = (int) (Math.sqrt((double) imageValue / 255) * 255);
-                    imageValue = (int) (Math.sqrt((double) imageValue / 255) * 255);
-                }
-
-                g.setColor(new Color(imageValue, imageValue, imageValue));
+                g.setColor(chooseColor(imageValue));
                 g.fillRect(col * zoom, row * zoom, zoom, zoom);
 
                 if (displayValues) {
@@ -102,6 +97,22 @@ public class ImagePanel extends JPanel {
 
     protected void toggleDisplayValues() {
         displayValues = !displayValues;
+    }
+
+    protected int boundToColorValue(int value) {
+
+        if (value > 255) {
+            value = 255;
+        } else if (value < 0) {
+            value = 0;
+        }
+        return value;
+    }
+
+    protected Color chooseColor(int value) {
+
+        value = boundToColorValue(value);
+        return new Color(value, value, value);
     }
 
 }
