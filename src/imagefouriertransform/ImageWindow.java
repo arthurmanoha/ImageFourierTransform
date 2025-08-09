@@ -7,6 +7,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import static java.lang.Math.PI;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -31,6 +32,7 @@ public class ImageWindow extends JFrame {
     int availableWidth, availableHeight; // for each image
 
     int chunkSize = 32;
+    boolean useCenteredChunks = false;
     double percentage; // [0; 100]
 
 //    boolean centerTransform = false;
@@ -152,6 +154,15 @@ public class ImageWindow extends JFrame {
         buttonsPanelLayout.setConstraints(transformButton, buttonPanelConstraints);
         buttonsPanel.add(transformButton);
 
+        JCheckBox centerCheckBox = new JCheckBox("Center");
+        centerCheckBox.addActionListener((e) -> {
+            useCenteredChunks = centerCheckBox.isSelected();
+        });
+        buttonPanelConstraints.gridx = 2;
+        buttonPanelConstraints.gridy = 0;
+        buttonsPanelLayout.setConstraints(centerCheckBox, buttonPanelConstraints);
+        buttonsPanel.add(centerCheckBox);
+
         JButton buttonPixelOn = new JButton("ON");
         buttonPixelOn.addActionListener((e) -> {
             setTitle("ON");
@@ -219,16 +230,13 @@ public class ImageWindow extends JFrame {
                         Fuv.increment(exponentPart.multiply(imageSource.get(y, x)));
                     }
                 }
-//                Fuv = Fuv.divide(M * N);
                 Fuv = Fuv.divide(chunkSize * chunkSize);
-                imageDest.set(v, u, Fuv);
+                if (useCenteredChunks) {
+                    imageDest.set(yStart + (v - yStart + chunkSize / 2) % chunkSize, xStart + (u - xStart + chunkSize / 2) % chunkSize, Fuv);
+                } else {
+                    imageDest.set(v, u, Fuv);
+                }
 
-//                if (centerTransform) {
-//                    imageDest.set((int) ((v + chunkSize / 2) % chunkSize),
-//                            (int) ((u + chunkSize / 2) % chunkSize), Fuv);
-//                } else {
-//                imageDest.set(v, u, Fuv);
-//                }
             }
         }
         System.out.println("Computing transform done");
@@ -260,21 +268,19 @@ public class ImageWindow extends JFrame {
 
                         boolean pixelIsActive;
                         pixelIsActive = transformedImagePanel.isActive(v, u);
-//                        if (centerTransform) {
-//                            pixelIsActive = transformedImagePanel.isActive((int) ((v + M / 2) % M), (int) ((u + N / 2) % N));
-//                        } else {
-//                            pixelIsActive = transformedImagePanel.isActive(v, u);
-//                        }
+
+                        int centeredU = u;
+                        int centeredV = v;
+
+                        if (useCenteredChunks) {
+                            centeredU = uStart + (u + chunkSize / 2) % chunkSize;
+                            centeredV = vStart + (v + chunkSize / 2) % chunkSize;
+                        }
 
                         if (pixelIsActive) {
-                            double argument = 2 * PI * ((double) (u * x) / chunkSize + (double) (v * y) / chunkSize);
+                            double argument = 2 * PI * ((double) (centeredU * x) / chunkSize + (double) (centeredV * y) / chunkSize);
                             Complex exponentPart = new Complex(argument);
                             fxy.increment(exponentPart.multiply(imageSource.get(v, u)));
-//                            if (centerTransform) {
-//                                fxy.increment(exponentPart.multiply(imageSource.get((int) ((v + M / 2) % M), (int) ((u + N / 2) % N))));
-//                            } else {
-//                                fxy.increment(exponentPart.multiply(imageSource.get(v, u)));
-//                            }
                         }
                     }
                 }
