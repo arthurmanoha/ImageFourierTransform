@@ -8,6 +8,7 @@ import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.util.ArrayList;
 
 /**
  *
@@ -22,18 +23,42 @@ public class RestrictedImagePanel extends ImagePanel {
     private int currentMouseRow, currentMouseCol;
     private int clickRow, clickCol;
 
+    private ArrayList<RestrictedImagePanel> listeners;
+
+    // Show the pixels even when not selected
+    private boolean displayRows;
+
+    /**
+     * Create a panel with an empty image of the specified size
+     *
+     * @param chunkSize
+     */
+    public RestrictedImagePanel(int chunkSize) {
+        super(null);
+        currentMode = ImageWindow.selectionMode.OFF;
+        image = new MyImage(chunkSize, chunkSize, false, true);
+        initializeFlags(chunkSize, chunkSize);
+        initializeMouseListeners();
+        displayRows = false;
+    }
+
+    /**
+     * Create a panel with a specified image
+     *
+     * @param imageParam
+     */
     public RestrictedImagePanel(MyImage imageParam) {
         super(imageParam);
 
-        flags = new ImageWindow.selectionMode[image.getHeight()][];
-        for (int row = 0; row < image.getHeight(); row++) {
-            flags[row] = new ImageWindow.selectionMode[image.getWidth()];
-            for (int col = 0; col < image.getWidth(); col++) {
-                flags[row][col] = ImageWindow.selectionMode.ON;
-            }
-        }
+        currentMode = ImageWindow.selectionMode.OFF;
+        initializeFlags(image.getWidth(), image.getHeight());
+        initializeMouseListeners();
+        displayRows = false;
+    }
 
-        currentMode = ImageWindow.selectionMode.ON;
+    private void initializeMouseListeners() {
+
+        listeners = new ArrayList<>();
 
         this.addMouseListener(new MouseAdapter() {
 
@@ -76,6 +101,7 @@ public class RestrictedImagePanel extends ImagePanel {
                     }
                 }
                 isMouseButtonPressed = false;
+                updateListeners();
                 repaint();
             }
         });
@@ -96,6 +122,16 @@ public class RestrictedImagePanel extends ImagePanel {
                 repaint();
             }
         });
+    }
+
+    private void initializeFlags(int width, int height) {
+        flags = new ImageWindow.selectionMode[height][];
+        for (int row = 0; row < height; row++) {
+            flags[row] = new ImageWindow.selectionMode[width];
+            for (int col = 0; col < width; col++) {
+                flags[row][col] = ImageWindow.selectionMode.ON;
+            }
+        }
     }
 
     void setMode(ImageWindow.selectionMode newMode) {
@@ -121,6 +157,19 @@ public class RestrictedImagePanel extends ImagePanel {
                 }
             }
         }
+
+        if (displayRows) {
+            g.setColor(Color.gray);
+            int width = g.getClipBounds().width;
+            for (int row = 0; row < image.getHeight(); row++) {
+                g.drawLine(0, row * zoom, width, row * zoom);
+            }
+            int height = g.getClipBounds().height;
+            for (int col = 0; col < image.getWidth(); col++) {
+                g.drawLine(col * zoom, 0, col * zoom, height);
+            }
+        }
+
         if (isMouseButtonPressed) {
             // Draw a rectangle around the pixels that will be set.
 
@@ -186,5 +235,63 @@ public class RestrictedImagePanel extends ImagePanel {
 
         double fraction = (double) activeNbPixels / (double) totalNbPixels * 100;
         return trim(fraction + "", 2) + " % active";
+    }
+
+    protected void addListener(RestrictedImagePanel newListener) {
+        if (listeners != null) {
+            listeners.add(newListener);
+        }
+    }
+
+    /**
+     * Tell the listeners that this panel has changed.
+     */
+    private void updateListeners() {
+        for (RestrictedImagePanel listener : listeners) {
+            listener.update(flags);
+        }
+    }
+
+    private void reset() {
+        for (int row = 0; row < flags.length; row++) {
+            for (int col = 0; col < flags[0].length; col++) {
+                flags[row][col] = OFF;
+            }
+        }
+    }
+
+    /**
+     * Use the new information from another panel.
+     *
+     * @param mask
+     */
+    private void update(ImageWindow.selectionMode[][] mask) {
+
+        int flagsHeight = mask.length;
+        int flagsWidth = mask[0].length;
+
+        int nbChunkRows = this.flags.length / flagsHeight;
+        int nbChunkCols = this.flags[0].length / flagsWidth;
+
+        reset();
+
+        // Scan the pixels of the mask, and apply them to all the chunks.
+        for (int row = 0; row < flagsHeight; row++) {
+            for (int col = 0; col < flagsWidth; col++) {
+                // Scan all the chunks
+                for (int chunkRow = 0; chunkRow < nbChunkRows; chunkRow++) {
+                    for (int chunkCol = 0; chunkCol < nbChunkCols; chunkCol++) {
+                        int finalRow = chunkRow * flagsHeight + row;
+                        int finalCol = chunkCol * flagsWidth + col;
+                        flags[finalRow][finalCol] = mask[row][col];
+                    }
+                }
+            }
+        }
+        repaint();
+    }
+
+    protected void toggleDisplayRows() {
+        displayRows = !displayRows;
     }
 }
