@@ -37,6 +37,9 @@ public class RestrictedImagePanel extends ImagePanel {
         super(null);
         currentMode = ImageWindow.selectionMode.OFF;
         image = new MyImage(chunkSize, chunkSize, false, true);
+        if (image != null) {
+            image.enforceDimensions(chunkSize);
+        }
         initializeFlags(chunkSize, chunkSize);
         initializeMouseListeners();
         displayRows = false;
@@ -46,14 +49,21 @@ public class RestrictedImagePanel extends ImagePanel {
      * Create a panel with a specified image
      *
      * @param imageParam
+     * @param chunkSize
      */
-    public RestrictedImagePanel(MyImage imageParam) {
-        super(imageParam);
-
+    public RestrictedImagePanel(MyImage imageParam, int chunkSize) {
+        super(imageParam, chunkSize);
         currentMode = ImageWindow.selectionMode.OFF;
+        if (image != null) {
+            imageParam.enforceDimensions(chunkSize);
+        }
         initializeFlags(image.getWidth(), image.getHeight());
         initializeMouseListeners();
         displayRows = false;
+    }
+
+    public RestrictedImagePanel(MyImage imageParam) {
+        this(imageParam, 0);
     }
 
     private void initializeMouseListeners() {
@@ -72,15 +82,15 @@ public class RestrictedImagePanel extends ImagePanel {
 
             @Override
             public void mousePressed(MouseEvent e) {
-                clickRow = e.getY() / zoom;
-                clickCol = e.getX() / zoom;
+                clickRow = (int) (e.getY() / zoom);
+                clickCol = (int) (e.getX() / zoom);
                 isMouseButtonPressed = true;
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                int releaseRow = e.getY() / zoom;
-                int releaseCol = e.getX() / zoom;
+                int releaseRow = (int) (e.getY() / zoom);
+                int releaseCol = (int) (e.getX() / zoom);
 
                 int rowStart = Math.min(clickRow, releaseRow);
                 int rowEnd = Math.max(clickRow, releaseRow);
@@ -111,14 +121,14 @@ public class RestrictedImagePanel extends ImagePanel {
 
             @Override
             public void mouseMoved(MouseEvent e) {
-                currentMouseRow = e.getY() / zoom;
-                currentMouseCol = e.getX() / zoom;
+                currentMouseRow = (int) (e.getY() / zoom);
+                currentMouseCol = (int) (e.getX() / zoom);
             }
 
             @Override
             public void mouseDragged(MouseEvent e) {
-                currentMouseRow = e.getY() / zoom;
-                currentMouseCol = e.getX() / zoom;
+                currentMouseRow = (int) (e.getY() / zoom);
+                currentMouseCol = (int) (e.getX() / zoom);
                 repaint();
             }
         });
@@ -152,8 +162,8 @@ public class RestrictedImagePanel extends ImagePanel {
             for (int col = 0; col < image.getWidth(); col++) {
 
                 if (flags[row][col] == OFF) {
-                    g.drawLine(col * zoom, row * zoom, (col + 1) * zoom, (row + 1) * zoom);
-                    g.drawLine((col + 1) * zoom, row * zoom, col * zoom, (row + 1) * zoom);
+                    g.drawLine((int) (col * zoom), (int) (row * zoom), (int) ((col + 1) * zoom), (int) ((row + 1) * zoom));
+                    g.drawLine((int) ((col + 1) * zoom), (int) (row * zoom), (int) (col * zoom), (int) ((row + 1) * zoom));
                 }
             }
         }
@@ -162,21 +172,21 @@ public class RestrictedImagePanel extends ImagePanel {
             g.setColor(Color.gray);
             int width = g.getClipBounds().width;
             for (int row = 0; row < image.getHeight(); row++) {
-                g.drawLine(0, row * zoom, width, row * zoom);
+                g.drawLine(0, (int) (row * zoom), (int) (width), (int) (row * zoom));
             }
             int height = g.getClipBounds().height;
             for (int col = 0; col < image.getWidth(); col++) {
-                g.drawLine(col * zoom, 0, col * zoom, height);
+                g.drawLine((int) (col * zoom), 0, (int) (col * zoom), height);
             }
         }
 
         if (isMouseButtonPressed) {
             // Draw a rectangle around the pixels that will be set.
 
-            int xDraw0 = clickCol * zoom;
-            int yDraw0 = clickRow * zoom;
-            int xDraw1 = currentMouseCol * zoom;
-            int yDraw1 = currentMouseRow * zoom;
+            int xDraw0 = (int) (clickCol * zoom);
+            int yDraw0 = (int) (clickRow * zoom);
+            int xDraw1 = (int) (currentMouseCol * zoom);
+            int yDraw1 = (int) (currentMouseRow * zoom);
             g.setColor(Color.white);
             g.drawLine(xDraw0, yDraw0, xDraw1, yDraw0);
             g.drawLine(xDraw0, yDraw1, xDraw1, yDraw1);

@@ -30,7 +30,7 @@ public class ImageWindow extends JFrame {
     JLabel labelReconstructed;
     JLabel labelTransformed2;
 
-    int width = 1920, height = 1050;
+    int width = 1220, height = 1050;
     int availableWidth, availableHeight; // for each image
 
     int chunkSize = 8;
@@ -52,7 +52,7 @@ public class ImageWindow extends JFrame {
         percentage = 0;
     }
 
-    public ImageWindow(MyImage imgA, MyImage imgB) {
+    public ImageWindow(MyImage imgA) {
         super();
 
         this.addComponentListener(new ComponentAdapter() {
@@ -100,7 +100,7 @@ public class ImageWindow extends JFrame {
         mainPanel.add(originalImagePanel);
 
         // Transformed image
-        transformedImagePanel = new RestrictedImagePanel(imgA.createEmptyClone());
+        transformedImagePanel = new RestrictedImagePanel(imgA.createEmptyClone(), chunkSize);
         transformedImagePanel.setPreferredSize(myPrefSize);
         prepareComponent(transformedImagePanel, 1, 1, layout);
         mainPanel.add(transformedImagePanel);
