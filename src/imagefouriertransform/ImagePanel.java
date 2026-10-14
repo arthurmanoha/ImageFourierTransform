@@ -14,7 +14,7 @@ public class ImagePanel extends JPanel {
     protected MyImage image;
 
     // Apparent size of a single pixel
-    protected int zoom;
+    public double zoom;
 
     // When this panel represents a Fourier image, the values must be remapped
     boolean mustChangeScale;
@@ -26,8 +26,12 @@ public class ImagePanel extends JPanel {
     private Color errorColor = Color.orange;
 
     public ImagePanel(MyImage imageParam) {
+        this(imageParam, 0);
+    }
+
+    public ImagePanel(MyImage imageParam, int chunkSize) {
         image = imageParam;
-        zoom = 10;
+        zoom = 4.0;
         displayValues = false;
         mustChangeScale = false;
         isMouseButtonPressed = false;
@@ -62,7 +66,9 @@ public class ImagePanel extends JPanel {
                 int imageValue = image.getRealPart(row, col);
                 // [0, 255]
                 g.setColor(chooseColor(imageValue));
-                g.fillRect(col * zoom, row * zoom, zoom, zoom);
+                g.fillRect((int) (col * zoom), (int) (row * zoom),
+                        Math.max((int) (zoom), 1),
+                        Math.max((int) (zoom), 1));
 
                 if (displayValues) {
                     g.setColor(Color.CYAN.darker());
@@ -73,7 +79,7 @@ public class ImagePanel extends JPanel {
 
         // Draw a rectangle around the image
         g.setColor(Color.red);
-        g.drawRect(0, 0, image.getWidth() * zoom, image.getHeight() * zoom);
+        g.drawRect(0, 0, (int) (image.getWidth() * zoom), (int) (image.getHeight() * zoom));
     }
 
     public void zoomIn() {
@@ -89,8 +95,8 @@ public class ImagePanel extends JPanel {
     }
 
     protected void computePreferredSize() {
-        int prefWidth = zoom * image.getWidth();
-        int prefHeight = zoom * image.getHeight();
+        int prefWidth = (int) (zoom * image.getWidth());
+        int prefHeight = (int) (zoom * image.getHeight());
         setPreferredSize(new Dimension(prefWidth, prefHeight));
         setSize(new Dimension(prefWidth, prefHeight));
     }

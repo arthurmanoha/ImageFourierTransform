@@ -7,6 +7,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import static java.lang.Math.PI;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -23,15 +24,20 @@ public class ImageWindow extends JFrame {
     ImagePanel originalImagePanel;
     RestrictedImagePanel transformedImagePanel;
     ImagePanel reconstructedImagePanel;
+    RestrictedImagePanel maskPanel;
     JLabel labelOriginal;
     JLabel labelTransformed;
     JLabel labelReconstructed;
+    JLabel labelTransformed2;
 
-    int width = 1900, height = 600;
+    int width = 1220, height = 1050;
     int availableWidth, availableHeight; // for each image
 
+    int chunkSize = 8;
+    boolean useCenteredChunks = true;
     double percentage; // [0; 100]
 
+//    boolean centerTransform = false;
     // The different ways we can interact with the pixels of the transformed image
     enum selectionMode {
         ON, OFF, TOGGLE
@@ -46,7 +52,7 @@ public class ImageWindow extends JFrame {
         percentage = 0;
     }
 
-    public ImageWindow(MyImage imgA, MyImage imgB) {
+    public ImageWindow(MyImage imgA) {
         super();
 
         this.addComponentListener(new ComponentAdapter() {
@@ -78,8 +84,12 @@ public class ImageWindow extends JFrame {
         mainPanel.add(labelTransformed, constraints);
 
         labelReconstructed = new JLabel("Reconstructed Image");
-        prepareComponent(labelReconstructed, 2, 0, layout);
+        prepareComponent(labelReconstructed, 0, 2, layout);
         mainPanel.add(labelReconstructed);
+
+        labelTransformed2 = new JLabel("Mask");
+        prepareComponent(labelTransformed2, 1, 2, layout);
+        mainPanel.add(labelTransformed2);
 
         Dimension myPrefSize = new Dimension(availableWidth, 200);
 
@@ -90,7 +100,7 @@ public class ImageWindow extends JFrame {
         mainPanel.add(originalImagePanel);
 
         // Transformed image
-        transformedImagePanel = new RestrictedImagePanel(imgA.createEmptyClone());
+        transformedImagePanel = new RestrictedImagePanel(imgA.createEmptyClone(), chunkSize);
         transformedImagePanel.setPreferredSize(myPrefSize);
         prepareComponent(transformedImagePanel, 1, 1, layout);
         mainPanel.add(transformedImagePanel);
@@ -98,8 +108,18 @@ public class ImageWindow extends JFrame {
         // Reconstructed image
         reconstructedImagePanel = new ImagePanel(imgA.createEmptyClone());
         reconstructedImagePanel.setPreferredSize(myPrefSize);
-        prepareComponent(reconstructedImagePanel, 2, 1, layout);
+        prepareComponent(reconstructedImagePanel, 0, 3, layout);
         mainPanel.add(reconstructedImagePanel);
+
+        // Reconstructed image
+        maskPanel = new RestrictedImagePanel(chunkSize);
+        maskPanel.setPreferredSize(myPrefSize);
+        prepareComponent(maskPanel, 1, 3, layout);
+        maskPanel.zoom *= 4;
+        maskPanel.toggleDisplayRows();
+        mainPanel.add(maskPanel);
+
+        maskPanel.addListener(transformedImagePanel);
 
         createButtonsPanel();
 
@@ -115,6 +135,7 @@ public class ImageWindow extends JFrame {
         originalImagePanel.setPreferredSize(new Dimension(availableWidth, availableHeight));
         transformedImagePanel.setPreferredSize(new Dimension(availableWidth, availableHeight));
         reconstructedImagePanel.setPreferredSize(new Dimension(availableWidth, availableHeight));
+        maskPanel.setPreferredSize(new Dimension(availableWidth, availableHeight));
         setPreferredSize(new Dimension(width, height));
         setVisible(true);
         repaint();
@@ -150,10 +171,20 @@ public class ImageWindow extends JFrame {
         buttonsPanelLayout.setConstraints(transformButton, buttonPanelConstraints);
         buttonsPanel.add(transformButton);
 
+        JCheckBox centerCheckBox = new JCheckBox("Center", true);
+        centerCheckBox.addActionListener((e) -> {
+            useCenteredChunks = centerCheckBox.isSelected();
+        });
+        buttonPanelConstraints.gridx = 2;
+        buttonPanelConstraints.gridy = 0;
+        buttonsPanelLayout.setConstraints(centerCheckBox, buttonPanelConstraints);
+        buttonsPanel.add(centerCheckBox);
+
         JButton buttonPixelOn = new JButton("ON");
         buttonPixelOn.addActionListener((e) -> {
             setTitle("ON");
             transformedImagePanel.setMode(selectionMode.ON);
+            maskPanel.setMode(selectionMode.ON);
         });
         buttonPanelConstraints.gridx = 0;
         buttonPanelConstraints.gridy = 1;
@@ -164,6 +195,7 @@ public class ImageWindow extends JFrame {
         buttonPixelOff.addActionListener((e) -> {
             setTitle("OFF");
             transformedImagePanel.setMode(selectionMode.OFF);
+            maskPanel.setMode(selectionMode.OFF);
         });
         buttonPanelConstraints.gridx = 1;
         buttonPanelConstraints.gridy = 1;
@@ -174,6 +206,7 @@ public class ImageWindow extends JFrame {
         buttonTogglePixel.addActionListener((e) -> {
             setTitle("TOGGLE");
             transformedImagePanel.setMode(selectionMode.TOGGLE);
+            maskPanel.setMode(selectionMode.TOGGLE);
         });
         buttonPanelConstraints.gridx = 2;
         buttonPanelConstraints.gridy = 1;
@@ -186,6 +219,7 @@ public class ImageWindow extends JFrame {
         originalImagePanel.zoomOut();
         transformedImagePanel.zoomOut();
         reconstructedImagePanel.zoomOut();
+        maskPanel.zoomOut();
         repaint();
     }
 
@@ -194,6 +228,7 @@ public class ImageWindow extends JFrame {
         originalImagePanel.zoomIn();
         transformedImagePanel.zoomIn();
         reconstructedImagePanel.zoomIn();
+        maskPanel.zoomIn();
         repaint();
     }
 
@@ -203,19 +238,27 @@ public class ImageWindow extends JFrame {
         double N = imageSource.getWidth();
 
         for (int v = 0; v < M; v++) {
+            int yStart = (v / chunkSize) * chunkSize;
             for (int u = 0; u < N; u++) {
+                int xStart = (u / chunkSize) * chunkSize;
 
                 // Compute the value of pixel (u,v) of the tranform
                 Complex Fuv = new Complex();
-                for (int y = 0; y < M; y++) {
-                    for (int x = 0; x < N; x++) {
-                        double argument = -2 * PI * ((double) (u * x) / N + (double) (v * y) / M);
+
+                for (int y = yStart; y < yStart + chunkSize; y++) {
+                    for (int x = xStart; x < xStart + chunkSize; x++) {
+                        double argument = -2 * PI * ((double) (u * x) / chunkSize + (double) (v * y) / chunkSize);
                         Complex exponentPart = new Complex(argument);
                         Fuv.increment(exponentPart.multiply(imageSource.get(y, x)));
                     }
                 }
-                Fuv = Fuv.divide(M * N);
-                imageDest.set((int) ((v + M / 2) % M), (int) ((u + N / 2) % N), Fuv);
+                Fuv = Fuv.divide(chunkSize * chunkSize);
+                if (useCenteredChunks) {
+                    imageDest.set(yStart + (v - yStart + chunkSize / 2) % chunkSize, xStart + (u - xStart + chunkSize / 2) % chunkSize, Fuv);
+                } else {
+                    imageDest.set(v, u, Fuv);
+                }
+
             }
         }
         System.out.println("Computing transform done");
@@ -236,16 +279,30 @@ public class ImageWindow extends JFrame {
         double N = imageSource.getWidth();
 
         for (int x = 0; x < N; x++) {
+            int uStart = (x / chunkSize) * chunkSize;
             for (int y = 0; y < M; y++) {
+                int vStart = (y / chunkSize) * chunkSize;
 
                 // Compute the value of pixel (x,y) of the decoded image
                 Complex fxy = new Complex();
-                for (int u = 0; u < N; u++) {
-                    for (int v = 0; v < M; v++) {
-                        if (transformedImagePanel.isActive((int) ((v + M / 2) % M), (int) ((u + N / 2) % N))) {
-                            double argument = 2 * PI * ((double) (u * x) / N + (double) (v * y) / M);
+                for (int u = uStart; u < uStart + chunkSize; u++) {
+                    for (int v = vStart; v < vStart + chunkSize; v++) {
+
+                        boolean pixelIsActive;
+                        pixelIsActive = transformedImagePanel.isActive(v, u);
+
+                        int centeredU = u;
+                        int centeredV = v;
+
+                        if (useCenteredChunks) {
+                            centeredU = uStart + (u + chunkSize / 2) % chunkSize;
+                            centeredV = vStart + (v + chunkSize / 2) % chunkSize;
+                        }
+
+                        if (pixelIsActive) {
+                            double argument = 2 * PI * ((double) (centeredU * x) / chunkSize + (double) (centeredV * y) / chunkSize);
                             Complex exponentPart = new Complex(argument);
-                            fxy.increment(exponentPart.multiply(imageSource.get((int) ((v + M / 2) % M), (int) ((u + N / 2) % N))));
+                            fxy.increment(exponentPart.multiply(imageSource.get(v, u)));
                         }
                     }
                 }

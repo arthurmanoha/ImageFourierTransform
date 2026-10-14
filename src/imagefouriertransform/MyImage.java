@@ -26,18 +26,25 @@ public class MyImage {
         try {
             BufferedImage image = ImageIO.read(new File(filename));
 
-            array2D = new Complex[image.getHeight()][image.getWidth()];
+            initiateArray(image, image.getHeight(), image.getWidth());
 
-            for (int row = 0; row < image.getHeight(); row++) {
-                for (int col = 0; col < image.getWidth(); col++) {
-                    int colorInt = image.getRGB(col, row);
-                    Color c = new Color(colorInt);
-                    int grayLevel = (c.getRed() + c.getGreen() + c.getBlue()) / 3;
-                    array2D[row][col] = new Complex(grayLevel, 0);
-                }
-            }
         } catch (IOException ex) {
             Logger.getLogger(MyImage.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("Error filename: " + filename);
+        }
+    }
+
+    private void initiateArray(BufferedImage image, int height, int width) {
+
+        array2D = new Complex[height][width];
+
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                int colorInt = image.getRGB(col, row);
+                Color c = new Color(colorInt);
+                int grayLevel = (c.getRed() + c.getGreen() + c.getBlue()) / 3;
+                array2D[row][col] = new Complex(grayLevel, 0);
+            }
         }
     }
 
@@ -134,11 +141,19 @@ public class MyImage {
     }
 
     Complex get(int row, int col) {
-        return array2D[row][col];
+        try {
+            return array2D[row][col];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return new Complex();
+        }
     }
 
     void set(int row, int col, Complex newVal) {
-        array2D[row][col] = newVal;
+        try {
+            array2D[row][col] = newVal;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            // Tried setting an out of bounds pixel because the image size is not a multiple of the chunk size.
+        }
     }
 
     MyImage createEmptyClone() {
@@ -174,5 +189,24 @@ public class MyImage {
             }
         }
         return result;
+    }
+
+    /**
+     * Make sure the dimensions are a multiple of the parameter. Extend the
+     * image if necessary.
+     *
+     * @param chunkSize
+     */
+    protected void enforceDimensions(int chunkSize) {
+        System.out.println("EnforceDimensions, chunkSize: " + chunkSize);
+        if (chunkSize == 0) {
+            System.out.println("error chunk size is zero");
+        } else if (array2D.length % chunkSize != 0) {
+            // Must add rows;
+            int currentHeight = array2D.length;
+
+            int newHeight = (currentHeight / chunkSize + 1) * chunkSize;
+            System.out.println("going from " + currentHeight + " rows to " + newHeight + " rows.");
+        }
     }
 }
