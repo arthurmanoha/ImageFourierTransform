@@ -31,11 +31,10 @@ public class ImagePanel extends JPanel {
 
     public ImagePanel(MyImage imageParam, int chunkSize) {
         image = imageParam;
-        zoom = 4.0;
+        zoom = 5.0;
         displayValues = false;
         mustChangeScale = false;
         isMouseButtonPressed = false;
-
     }
 
     public ImagePanel(MyImage imageParam, boolean mustChangeScaleParam) {
@@ -83,13 +82,13 @@ public class ImagePanel extends JPanel {
     }
 
     public void zoomIn() {
-        zoom *= 2;
+        zoom *= 1.1;
         computePreferredSize();
         repaint();
     }
 
     public void zoomOut() {
-        zoom /= 2;
+        zoom /= 1.1;
         computePreferredSize();
         repaint();
     }
@@ -99,6 +98,12 @@ public class ImagePanel extends JPanel {
         int prefHeight = (int) (zoom * image.getHeight());
         setPreferredSize(new Dimension(prefWidth, prefHeight));
         setSize(new Dimension(prefWidth, prefHeight));
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        computePreferredSize();
+        return this.getSize();
     }
 
     protected void toggleDisplayValues() {
