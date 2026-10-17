@@ -1,43 +1,63 @@
 package imagefouriertransform;
 
-import java.awt.Dimension;
+import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import static java.lang.Math.PI;
+import java.util.ArrayList;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 
 /**
  *
  * @author arthu
  */
-public class ImageWindow extends JFrame {
+public class ImageWindow extends JFrame implements ComponentListener {
 
-    JPanel mainPanel;
+    JPanel imagePanel;
+    JScrollPane scroll;
     JPanel buttonsPanel;
     ImagePanel originalImagePanel;
     RestrictedImagePanel transformedImagePanel;
     ImagePanel reconstructedImagePanel;
+    JPanel maskSideBar;
     RestrictedImagePanel maskPanel;
-    JLabel labelOriginal;
     JLabel labelTransformed;
-    JLabel labelReconstructed;
-    JLabel labelTransformed2;
 
-    int width = 1220, height = 1050;
-    int availableWidth, availableHeight; // for each image
+    int imageInitWidth = 200;
+    int imageInitHeight = 100;
+
+    ArrayList<JButton> buttonList = new ArrayList<>();
 
     int chunkSize = 8;
     boolean useCenteredChunks = true;
     double percentage; // [0; 100]
 
-//    boolean centerTransform = false;
+    @Override
+    public void componentResized(ComponentEvent e) {
+        scroll.revalidate();
+    }
+
+    @Override
+    public void componentMoved(ComponentEvent e) {
+    }
+
+    @Override
+    public void componentShown(ComponentEvent e) {
+    }
+
+    @Override
+    public void componentHidden(ComponentEvent e) {
+    }
+
     // The different ways we can interact with the pixels of the transformed image
     enum selectionMode {
         ON, OFF, TOGGLE
@@ -48,109 +68,89 @@ public class ImageWindow extends JFrame {
         constraints.gridx = col;
         constraints.gridy = row;
         layout.setConstraints(comp, constraints);
-        availableWidth = getSize().width / 3;
         percentage = 0;
     }
 
     public ImageWindow(MyImage imgA) {
         super();
 
-        this.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                availableWidth = getSize().width / 3;
-                repaint();
-            }
-        });
+        this.addComponentListener(this);
 
-        mainPanel = new JPanel();
+        this.setLayout(new BorderLayout());
 
-        this.setContentPane(mainPanel);
-        setVisible(true);
+        imagePanel = new WrappingPanel();
 
-        GridBagLayout layout = new GridBagLayout();
-        mainPanel.setLayout(layout);
-        GridBagConstraints constraints = new GridBagConstraints();
+        JPanel controlPanel = new JPanel();
+        createButtonsForControlPanel(controlPanel);
 
-        this.setSize(new Dimension(10, 10));
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.add(controlPanel, BorderLayout.SOUTH);
 
-        labelOriginal = new JLabel("Original Image");
-        prepareComponent(labelOriginal, 0, 0, layout);
-        mainPanel.add(labelOriginal);
-
-        labelTransformed = new JLabel("Transformed Image");
-        prepareComponent(labelTransformed, 1, 0, layout);
-        mainPanel.add(labelTransformed, constraints);
-
-        labelReconstructed = new JLabel("Reconstructed Image");
-        prepareComponent(labelReconstructed, 0, 2, layout);
-        mainPanel.add(labelReconstructed);
-
-        labelTransformed2 = new JLabel("Mask");
-        prepareComponent(labelTransformed2, 1, 2, layout);
-        mainPanel.add(labelTransformed2);
-
-        Dimension myPrefSize = new Dimension(availableWidth, 200);
-
+        //      Add the images
         // First image
         originalImagePanel = new ImagePanel(imgA);
-        originalImagePanel.setPreferredSize(myPrefSize);
-        prepareComponent(originalImagePanel, 0, 1, layout);
-        mainPanel.add(originalImagePanel);
+        originalImagePanel.setSize(imageInitWidth, imageInitHeight);
+        imagePanel.add(originalImagePanel);
 
         // Transformed image
         transformedImagePanel = new RestrictedImagePanel(imgA.createEmptyClone(), chunkSize);
-        transformedImagePanel.setPreferredSize(myPrefSize);
-        prepareComponent(transformedImagePanel, 1, 1, layout);
-        mainPanel.add(transformedImagePanel);
+        transformedImagePanel.setSize(imageInitWidth, imageInitHeight);
+        imagePanel.add(transformedImagePanel);
 
         // Reconstructed image
         reconstructedImagePanel = new ImagePanel(imgA.createEmptyClone());
-        reconstructedImagePanel.setPreferredSize(myPrefSize);
-        prepareComponent(reconstructedImagePanel, 0, 3, layout);
-        mainPanel.add(reconstructedImagePanel);
+        reconstructedImagePanel.setSize(imageInitWidth, imageInitHeight);
+        imagePanel.add(reconstructedImagePanel);
 
-        // Reconstructed image
+        labelTransformed = new JLabel();
+        imagePanel.add(labelTransformed);
+
+        scroll = new JScrollPane(imagePanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        this.add(scroll, BorderLayout.CENTER);
+
+        // Mask panel
+        maskSideBar = new JPanel();
+        maskSideBar.setLayout(new BoxLayout(maskSideBar, BoxLayout.Y_AXIS));
         maskPanel = new RestrictedImagePanel(chunkSize);
-        maskPanel.setPreferredSize(myPrefSize);
-        prepareComponent(maskPanel, 1, 3, layout);
-        maskPanel.zoom *= 4;
+        maskPanel.zoom *= 5;
         maskPanel.toggleDisplayRows();
-        mainPanel.add(maskPanel);
+        maskSideBar.add(maskPanel);
+        maskPanel.setAlignmentX(1);
+
+        JButton maskZoomInButton = new JButton("+");
+        JButton maskZoomOutButton = new JButton("-");
+        maskZoomInButton.setAlignmentX(1);
+        maskZoomOutButton.setAlignmentX(1);
+
+        maskZoomInButton.addActionListener((e) -> {
+            maskPanel.zoomIn();
+            maskZoomInButton.setSize(maskZoomInButton.getSize().width + 5, maskZoomInButton.getSize().height + 5);
+            maskZoomOutButton.setSize(maskZoomOutButton.getSize().width + 5, maskZoomOutButton.getSize().height + 5);
+            maskSideBar.revalidate();
+        });
+        maskSideBar.add(maskZoomInButton);
+        maskZoomOutButton.addActionListener((e) -> {
+            maskPanel.zoomOut();
+            maskZoomInButton.setSize(maskZoomInButton.getSize().width - 5, maskZoomInButton.getSize().height - 5);
+            maskZoomOutButton.setSize(maskZoomOutButton.getSize().width - 5, maskZoomOutButton.getSize().height - 5);
+            maskSideBar.revalidate();
+        });
+        maskSideBar.add(maskZoomOutButton);
+        this.add(maskSideBar, BorderLayout.EAST);
 
         maskPanel.addListener(transformedImagePanel);
 
-        createButtonsPanel();
-
-        GridBagConstraints mainPanelConstraints = new GridBagConstraints();
-        mainPanelConstraints.gridx = 0;
-        mainPanelConstraints.gridy = 4;
-        mainPanelConstraints.gridwidth = 3;
-        layout.setConstraints(buttonsPanel, mainPanelConstraints);
-        mainPanel.add(buttonsPanel);
-
-        availableWidth = this.getSize().width;
-        availableHeight = this.getSize().height;
-        originalImagePanel.setPreferredSize(new Dimension(availableWidth, availableHeight));
-        transformedImagePanel.setPreferredSize(new Dimension(availableWidth, availableHeight));
-        reconstructedImagePanel.setPreferredSize(new Dimension(availableWidth, availableHeight));
-        maskPanel.setPreferredSize(new Dimension(availableWidth, availableHeight));
-        setPreferredSize(new Dimension(width, height));
         setVisible(true);
-        repaint();
         pack();
-        zoomIn();
-        zoomOut();
-        revalidate();
+        setSize(1600, 1000);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
     /**
      * Setup the buttons for the UI
      */
-    private void createButtonsPanel() {
+    private void createButtonsForControlPanel(JPanel buttonsPanel) {
 
-        buttonsPanel = new JPanel();
         GridBagLayout buttonsPanelLayout = new GridBagLayout();
         buttonsPanel.setLayout(buttonsPanelLayout);
         GridBagConstraints buttonPanelConstraints = new GridBagConstraints();
@@ -212,24 +212,52 @@ public class ImageWindow extends JFrame {
         buttonPanelConstraints.gridy = 1;
         buttonsPanelLayout.setConstraints(buttonTogglePixel, buttonPanelConstraints);
         buttonsPanel.add(buttonTogglePixel);
+
+        JButton zoomInButton = new JButton("z+");
+        zoomInButton.addActionListener((e) -> {
+            zoomIn();
+            repaint();
+        });
+        buttonPanelConstraints.gridx = 3;
+        buttonPanelConstraints.gridy = 0;
+        buttonsPanelLayout.setConstraints(zoomInButton, buttonPanelConstraints);
+        buttonsPanel.add(zoomInButton);
+
+        JButton zoomOutButton = new JButton("z-");
+        zoomOutButton.addActionListener((e) -> {
+            zoomOut();
+            repaint();
+        });
+        buttonPanelConstraints.gridx = 3;
+        buttonPanelConstraints.gridy = 1;
+        buttonsPanelLayout.setConstraints(zoomOutButton, buttonPanelConstraints);
+        buttonsPanel.add(zoomOutButton);
     }
 
     private void zoomOut() {
-        availableWidth = getSize().width / 3;
-        originalImagePanel.zoomOut();
-        transformedImagePanel.zoomOut();
-        reconstructedImagePanel.zoomOut();
-        maskPanel.zoomOut();
-        repaint();
+        try {
+            originalImagePanel.zoomOut();
+            transformedImagePanel.zoomOut();
+            reconstructedImagePanel.zoomOut();
+        } catch (NullPointerException e) {
+            System.out.println("Not all panels initiated.");
+        }
+        imagePanel.revalidate();
+        imagePanel.repaint();
+        scroll.revalidate();
     }
 
     private void zoomIn() {
-        availableWidth = getSize().width / 3;
-        originalImagePanel.zoomIn();
-        transformedImagePanel.zoomIn();
-        reconstructedImagePanel.zoomIn();
-        maskPanel.zoomIn();
-        repaint();
+        try {
+            originalImagePanel.zoomIn();
+            transformedImagePanel.zoomIn();
+            reconstructedImagePanel.zoomIn();
+        } catch (NullPointerException e) {
+            System.out.println("Not all panels initiated.");
+        }
+        imagePanel.revalidate();
+        imagePanel.repaint();
+        scroll.revalidate();
     }
 
     private void computeDirectTransform(MyImage imageSource, MyImage imageDest) {
